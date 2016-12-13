@@ -119,10 +119,12 @@ decline_schema = {'type': 'object',
                          'key': True
                      },
                      'created_at': {
-                         'type': 'string'
+                         'type': 'string',
+                         'format': 'date-time'
                      },
                      'updated_at': {
-                         'type': 'string'
+                         'type': 'string',
+                         'format': 'date-time'
                      },
                      'end_user_id': {
                          'type': 'integer'

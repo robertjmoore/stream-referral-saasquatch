@@ -31,13 +31,17 @@ def configure_logging(level=logging.DEBUG):
 def authed_get(url):
     return session.request(method='get', url=url)
 
-def authed_get_all_pages(url):
+def authed_get_all_pages(baseUrl, bookmarkName):
+    global bookmark
     while True:
+        url = baseUrl
+        if bookmark.get(bookmarkName, None):
+            url = baseUrl + '&created[gt]=' + bookmark[bookmarkName]
         r = authed_get(url)
+        rJson = r.json();
+        logger.info(url + ':' + str(len(rJson)) + ' results')
         yield r
-        if 'next' in r.links:
-            url = r.links['next']['url']
-        else:
+        if len(rJson) <= 1:
             break
 
 response_schema = {'type': 'object',
@@ -48,17 +52,15 @@ response_schema = {'type': 'object',
                      },
                      'created_at': {
                          'type': 'string',
-                         'format': 'date-time'
                      },
                      'updated_at': {
                          'type': 'string',
-                         'format': 'date-time'
                      },
                      'score': {
                          'type': 'integer',
                      },
                      'text': {
-                         'type': 'string',
+                         'type': ['string','null'],
                      },
                      'ip_address': {
                          'type': 'string',
@@ -90,21 +92,18 @@ response_schema = {'type': 'object',
 
 def get_all_responses(since_date):
     global bookmark
-    query_string = '&created[gt]={}'.format(since_date) if since_date else ''
-
-    last_response_time = None
-    requestUrl = 'https://api.wootric.com/v1/responses?per_page=50&sort_order=asc{}'.format(query_string)
+    
+    last_response_unixtime = None
+    requestUrl = 'https://api.wootric.com/v1/responses?per_page=50&sort_order=asc'
     logger.info(requestUrl)
-    for response in authed_get_all_pages(requestUrl):
+    for response in authed_get_all_pages(requestUrl, 'responses'):
         responses = response.json()
         if len(responses) > 0:
             last_created_at_string = responses[-1]['created_at']
             last_created_at_datetime = datetime.datetime.strptime(last_created_at_string, '%Y-%m-%d %H:%M:%S %z')
-            last_response_time = last_created_at_datetime.datetime.total_seconds()
-            logger.info('lct is ' + last_response_time)
+            last_response_unixtime = int(last_created_at_datetime.timestamp())
         stitchstream.write_records('responses', responses)
-
-    bookmark['responses'] = last_response_time
+        bookmark['responses'] = str(last_response_unixtime)
 
 def get_access_token(client_id, client_secret):
     data = {

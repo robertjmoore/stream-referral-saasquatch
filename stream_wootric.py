@@ -43,6 +43,10 @@ def authed_get_all_pages(baseUrl, bookmarkName):
         if len(rJson) <= 1:
             break
 
+def wootricdate_to_datetime(wootricDateString):
+    return datetime.datetime.strptime(wootricDateString, '%Y-%m-%d %H:%M:%S %z')
+
+
 response_schema = {'type': 'object',
                  'properties': {
                      'id': {
@@ -50,10 +54,12 @@ response_schema = {'type': 'object',
                          'key': True
                      },
                      'created_at': {
-                         'type': 'string'
+                         'type': 'string',
+                         'format': 'date-time'
                      },
                      'updated_at': {
-                         'type': 'string'
+                         'type': 'string',
+                         'format': 'date-time'
                      },
                      'score': {
                          'type': 'integer'
@@ -89,27 +95,32 @@ response_schema = {'type': 'object',
                  'required': ['id']
              }
 
-def get_all_responses(since_date):
+def get_all_new_responses():
     global bookmark
     
     last_response_unixtime = None
     requestUrl = 'https://api.wootric.com/v1/responses?per_page=50&sort_order=asc'
-    for response in authed_get_all_pages(requestUrl, 'responses'):
-        responses = response.json()
+    for apiResponse in authed_get_all_pages(requestUrl, 'responses'):
+        responses = apiResponse.json()
         if len(responses) > 0:
-            last_created_at_string = responses[-1]['created_at']
-            last_created_at_datetime = datetime.datetime.strptime(last_created_at_string, '%Y-%m-%d %H:%M:%S %z')
+            last_created_at_datetime = wootricdate_to_datetime(responses[-1]['created_at'])
             last_response_unixtime = int(last_created_at_datetime.timestamp())
+
+        for index, item in enumerate(responses):
+            responses[index]['created_at'] = wootricdate_to_datetime(responses[index]['created_at']).isoformat()
+            responses[index]['updated_at'] = wootricdate_to_datetime(responses[index]['updated_at']).isoformat()
+
         stitchstream.write_records('responses', responses)
 
         #there is a limitation of wootric's API that only allows you to get 50 records at a time and has
         #no pagination trigger other than created_at date; as such if >50 records have the same created_at
         #date you hit an infinite loop of requests; this breaks you out of that loop if it happens
-        if bookmark.get('responses', None) == str(last_response_unixtime):
+        if bookmark.get('responses', None) == str(last_response_unixtime) and len(responses) > 1:
             logger.error('Breaking retrieval loop for responses at unixtime ' + str(last_response_unixtime) + ', will cause missing data')
             last_response_unixtime = last_response_unixtime + 1
 
-        bookmark['responses'] = str(last_response_unixtime)
+        if last_response_unixtime: #can be none if no new responses
+            bookmark['responses'] = str(last_response_unixtime)
 
 
 decline_schema = {'type': 'object',
@@ -136,7 +147,7 @@ decline_schema = {'type': 'object',
                  'required': ['id']
              }
 
-def get_all_declines(since_date):
+def get_all_new_declines():
     global bookmark
     
     last_decline_unixtime = None
@@ -144,19 +155,24 @@ def get_all_declines(since_date):
     for response in authed_get_all_pages(requestUrl, 'declines'):
         declines = response.json()
         if len(declines) > 0:
-            last_created_at_string = declines[-1]['created_at']
-            last_created_at_datetime = datetime.datetime.strptime(last_created_at_string, '%Y-%m-%d %H:%M:%S %z')
+            last_created_at_datetime = wootricdate_to_datetime(declines[-1]['created_at'])
             last_decline_unixtime = int(last_created_at_datetime.timestamp())
+
+        for index, item in enumerate(declines):
+            declines[index]['created_at'] = wootricdate_to_datetime(declines[index]['created_at']).isoformat()
+            declines[index]['updated_at'] = wootricdate_to_datetime(declines[index]['updated_at']).isoformat()
+
         stitchstream.write_records('declines', declines)
         
         #there is a limitation of wootric's API that only allows you to get 50 records at a time and has
         #no pagination trigger other than created_at date; as such if >50 records have the same created_at
         #date you hit an infinite loop of requests; this breaks you out of that loop if it happens
-        if bookmark.get('declines', None) == str(last_decline_unixtime):
+        if bookmark.get('declines', None) == str(last_decline_unixtime) and len(declines) > 1:
             logger.error('Breaking retrieval loop for declines at unixtime ' + str(last_decline_unixtime) + ', will cause missing data')
             last_decline_unixtime = last_decline_unixtime + 1
 
-        bookmark['declines'] = str(last_decline_unixtime)
+        if last_decline_unixtime: #can be None if no new declines
+            bookmark['declines'] = str(last_decline_unixtime)
 
 enduser_schema = {'type': 'object',
                  'properties': {
@@ -165,10 +181,12 @@ enduser_schema = {'type': 'object',
                          'key': True
                      },
                      'created_at': {
-                         'type': 'string'
+                         'type': 'string',
+                         'format': 'date-time'
                      },
                      'updated_at': {
-                         'type': 'string'
+                         'type': 'string',
+                         'format': 'date-time'
                      },
                      'email': {
                          'type': 'string'
@@ -186,7 +204,7 @@ enduser_schema = {'type': 'object',
                  'required': ['id']
              }
 
-def get_all_endusers(since_date):
+def get_all_new_endusers():
     global bookmark
     
     last_enduser_unixtime = None
@@ -194,19 +212,24 @@ def get_all_endusers(since_date):
     for response in authed_get_all_pages(requestUrl, 'endusers'):
         endusers = response.json()
         if len(endusers) > 0:
-            last_created_at_string = endusers[-1]['created_at']
-            last_created_at_datetime = datetime.datetime.strptime(last_created_at_string, '%Y-%m-%d %H:%M:%S %z')
+            last_created_at_datetime = wootricdate_to_datetime(endusers[-1]['created_at'])
             last_enduser_unixtime = int(last_created_at_datetime.timestamp())
+
+        for index, item in enumerate(endusers):
+            endusers[index]['created_at'] = wootricdate_to_datetime(endusers[index]['created_at']).isoformat()
+            endusers[index]['updated_at'] = wootricdate_to_datetime(endusers[index]['updated_at']).isoformat()
+
         stitchstream.write_records('endusers', endusers)
 
         #there is a limitation of wootric's API that only allows you to get 50 records at a time and has
         #no pagination trigger other than created_at date; as such if >50 records have the same created_at
         #date you hit an infinite loop of requests; this breaks you out of that loop if it happens
-        if bookmark.get('endusers', None) == str(last_enduser_unixtime):
+        if bookmark.get('endusers', None) == str(last_enduser_unixtime) and len(endusers) > 1:
             logger.error('Breaking retrieval loop for enduers at unixtime ' + str(last_enduser_unixtime) + ', will cause missing data')
             last_enduser_unixtime = last_enduser_unixtime + 1
 
-        bookmark['endusers'] = str(last_enduser_unixtime)
+        if last_enduser_unixtime: #can be None if no new endusers
+            bookmark['endusers'] = str(last_enduser_unixtime)
 
 def get_access_token(client_id, client_secret):
     data = {
@@ -242,20 +265,20 @@ if __name__ == '__main__':
     else:
         logger.info('Replicating all endusers')
     stitchstream.write_schema('endusers', enduser_schema)
-    get_all_endusers(bookmark.get('endusers', None))
+    get_all_new_endusers()
 
     if bookmark.get('responses', None):
         logger.info('Replicating responses since %s', bookmark.get('responses', None))
     else:
         logger.info('Replicating all responses')
     stitchstream.write_schema('responses', response_schema)
-    get_all_responses(bookmark.get('responses', None))
+    get_all_new_responses()
 
     if bookmark.get('declines', None):
         logger.info('Replicating declines since %s', bookmark.get('declines', None))
     else:
         logger.info('Replicating all declines')
     stitchstream.write_schema('declines', decline_schema)
-    get_all_declines(bookmark.get('declines', None))
+    get_all_new_declines()
 
     stitchstream.write_bookmark(bookmark)

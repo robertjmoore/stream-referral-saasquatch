@@ -192,7 +192,15 @@ enduser_schema = {'type': 'object',
                          'type': 'string'
                      },
                      'last_surveyed': {
-                         'type': ['string','null']
+                         "anyOf": [
+                             {
+                                 "type": "null",
+                             }, 
+                             {
+                                 "type": "string",
+                                 'format': 'date-time'
+                             }
+                         ]
                      },
                      'external_created_at': {
                          'type': ['integer','null']
@@ -218,6 +226,8 @@ def get_all_new_endusers():
         for index, item in enumerate(endusers):
             endusers[index]['created_at'] = wootricdate_to_datetime(endusers[index]['created_at']).isoformat()
             endusers[index]['updated_at'] = wootricdate_to_datetime(endusers[index]['updated_at']).isoformat()
+            if endusers[index]['last_surveyed']:
+                endusers[index]['last_surveyed'] = wootricdate_to_datetime(endusers[index]['last_surveyed']).isoformat()
 
         stitchstream.write_records('endusers', endusers)
 

@@ -18,8 +18,20 @@ Clone this repository, and then:
 
 ```bash
 
-WOOTRIC_CLIENT_ID=<clientid> WOOTRIC_CLIENT_SECRET=<clientsecret> python stream_wootric.py [FILENAME]
+REFERRAL_SAASQUATCH_TENANT_ALIAS=<tenantalias> REFERRAL_SAASQUATCH_API_KEY=<apikey> python stream_referral_saasquatch.py [FILENAME]
 
 ```
 
 Where `clientid` and `clientsecret` are the 64-character strings retrieved from the API section of your Wootric account settings page.
+
+## Testing
+
+A python script that pre-populates an account with fictional users and referral activity can be run with:
+
+```bash
+
+REFERRAL_SAASQUATCH_TENANT_ALIAS=<tenantalias> REFERRAL_SAASQUATCH_API_KEY=<apikey> python seed_referral_saasquatch.py
+
+```
+
+The web interface for Referral SaaSquatch allows for the manual modification/update of users and referrals, creating the ability to modify the seed data and test incremental updates.

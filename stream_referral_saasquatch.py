@@ -7,6 +7,7 @@ import sys
 import json
 import time
 import datetime
+import csv
 
 session = requests.Session()
 logger = logging.getLogger()
@@ -67,6 +68,25 @@ def get_id_of_completed_export(exportType, startingTimestamp, tenant_alias, api_
     else:
         raise Exception('Request to create ' + exportType + ' export failed')
 
+def stream_file_contents(streamName, exportId, tenant_alias, api_key):
+    downloadUrl = 'https://app.referralsaasquatch.com/api/v1/' + tenant_alias + '/export/' + exportId + '/download'
+    auth = ('', api_key)
+    headers = { 'Content-Type' : 'application/json' }
+    r = requests.get(downloadUrl, stream=True, auth=auth, headers=headers)
+    
+    #get the mapping of column names from the header row
+    headerLine = [line.decode('utf-8') for line in r.iter_lines()]
+    headerJsonCsvReader = csv.reader([headerLine])
+    next(headerJsonCsvReader)
+
+    #iterate through the rest of the lines, persisting to Stitch
+    logger.info('LINES:')
+    for line in r.iter_lines():
+        text = line.decode('utf-8')
+        csvReader = csv.reader([text])
+        for csvLine in csvReader:
+            logger.info(csvLine)
+
 user_schema = {'type': 'object',
                  'properties': {
                      'id': {
@@ -110,10 +130,7 @@ def get_all_new_users(tenant_alias, api_key):
     
     startingTimestamp = bookmark.get('users', None) 
     exportId = get_id_of_completed_export('USER', startingTimestamp, tenant_alias, api_key)
-
-    logger.info('GOT EXPORT FILE ID: ' + exportId)
-
-    #UP NEXT: STREAM IN THE FILE IN PIECES AND PUSH IT TO STITCH...
+    stream_file_contents('users', exportId, tenant_alias, api_key)
 
     return exportId
 
